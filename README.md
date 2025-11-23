@@ -20,11 +20,17 @@ Automated installation and configuration script for deploying [Game Of Active Di
 
 This project provides a complete automation suite for deploying the GOAD (Game Of Active Directory) vulnerable Active Directory lab environment on Proxmox VE. GOAD is designed for penetration testing practice and learning Active Directory attack techniques.
 
+> **Official GOAD Repository:** https://github.com/Orange-Cyberdefense/GOAD
+
 The full GOAD lab consists of:
 - **5 Windows VMs** across **2 forests** and **3 domains**
 - Realistic Active Directory misconfigurations
 - Multiple attack vectors for practice
 - Isolated network environment
+
+### Installation Methods
+
+GOAD officially supports Proxmox through their Terraform provider. This repository provides an **alternative installation method** with enhanced automation and ease of use for beginners. See [INSTALLATION_METHODS.md](INSTALLATION_METHODS.md) for a comparison of approaches.
 
 ## Features
 
@@ -42,10 +48,13 @@ The full GOAD lab consists of:
 
 ### Hardware Requirements
 
-- **CPU**: 20+ cores recommended
-- **RAM**: 96GB total (38GB minimum for GOAD VMs + overhead)
+- **CPU**: 20+ cores recommended (10 cores minimum)
+- **RAM**: 96GB total (20GB minimum for GOAD VMs + overhead)
+  - Based on official GOAD specs: DC01(3GB) + DC02(3GB) + DC03(3GB) + SRV02(6GB) + SRV03(5GB) = 20GB
 - **Storage**: 300GB free space on NFS storage
 - **Network**: Dedicated network interface for VLAN 50
+
+> **Note:** RAM requirements are based on the official GOAD Proxmox provider specifications. SRV02 and SRV03 require more RAM than DCs due to running MSSQL, IIS, and other services.
 
 ### Software Requirements
 
@@ -267,15 +276,19 @@ WINDOWS_ADMIN_PASSWORD="Password123!"
 
 ### VM Specifications
 
-| VM    | Role                          | IP             | RAM  | CPU | Disk |
-|-------|-------------------------------|----------------|------|-----|------|
-| DC01  | Domain Controller (SK)        | 192.168.50.10  | 4GB  | 2   | 60GB |
-| DC02  | Domain Controller (North.SK)  | 192.168.50.11  | 4GB  | 2   | 60GB |
-| DC03  | Domain Controller (Essos)     | 192.168.50.12  | 4GB  | 2   | 60GB |
-| SRV02 | Server (SK)                   | 192.168.50.22  | 4GB  | 2   | 60GB |
-| SRV03 | Server (Essos)                | 192.168.50.23  | 4GB  | 2   | 60GB |
+Based on official GOAD Proxmox provider:
+
+| VM    | Role                          | OS      | IP             | RAM  | CPU | Disk |
+|-------|-------------------------------|---------|----------------|------|-----|------|
+| DC01  | Domain Controller (SK)        | 2019    | 192.168.50.10  | 3GB  | 2   | 60GB |
+| DC02  | Domain Controller (North.SK)  | 2019    | 192.168.50.11  | 3GB  | 2   | 60GB |
+| DC03  | Domain Controller (Essos)     | 2016    | 192.168.50.12  | 3GB  | 2   | 60GB |
+| SRV02 | Server (SK) - MSSQL, IIS      | 2019    | 192.168.50.22  | 6GB* | 2   | 60GB |
+| SRV03 | Server (Essos) - Services     | 2016    | 192.168.50.23  | 5GB* | 2   | 60GB |
 
 **Total**: 20GB RAM, 10 CPU cores, 300GB disk
+
+*SRV02 and SRV03 require more RAM for running MSSQL Server, IIS, and application services.
 
 ## Network Architecture
 

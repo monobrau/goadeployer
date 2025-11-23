@@ -57,13 +57,15 @@ ENABLE_NAT="true"
 VM_ID_START="800"
 
 # VM resource allocation
-# Total required: ~38GB RAM, ~200GB disk
+# Based on official GOAD Proxmox provider specs
+# Total required: ~20GB RAM, ~300GB disk
+# Note: SRV02 and SRV03 require more RAM than DCs due to additional services
 
 # DC01 - sevenkingdoms.local (Domain Controller)
 DC01_VMID="${VM_ID_START}"
 DC01_NAME="GOAD-DC01"
 DC01_CORES="2"
-DC01_MEMORY="4096"
+DC01_MEMORY="3096"    # Official GOAD spec
 DC01_DISK_SIZE="60G"
 DC01_IP="192.168.50.10"
 DC01_OS_TYPE="win2019"
@@ -72,7 +74,7 @@ DC01_OS_TYPE="win2019"
 DC02_VMID="$((VM_ID_START + 1))"
 DC02_NAME="GOAD-DC02"
 DC02_CORES="2"
-DC02_MEMORY="4096"
+DC02_MEMORY="3096"    # Official GOAD spec
 DC02_DISK_SIZE="60G"
 DC02_IP="192.168.50.11"
 DC02_OS_TYPE="win2019"
@@ -81,25 +83,27 @@ DC02_OS_TYPE="win2019"
 DC03_VMID="$((VM_ID_START + 2))"
 DC03_NAME="GOAD-DC03"
 DC03_CORES="2"
-DC03_MEMORY="4096"
+DC03_MEMORY="3096"    # Official GOAD spec
 DC03_DISK_SIZE="60G"
 DC03_IP="192.168.50.12"
-DC03_OS_TYPE="win2019"
+DC03_OS_TYPE="win2016"
 
 # SRV02 - sevenkingdoms.local (Server)
+# NOTE: Requires more RAM for MSSQL, IIS, and other services
 SRV02_VMID="$((VM_ID_START + 3))"
 SRV02_NAME="GOAD-SRV02"
 SRV02_CORES="2"
-SRV02_MEMORY="4096"
+SRV02_MEMORY="6240"   # Official GOAD spec (higher for services)
 SRV02_DISK_SIZE="60G"
 SRV02_IP="192.168.50.22"
 SRV02_OS_TYPE="win2019"
 
 # SRV03 - essos.local (Server)
+# NOTE: Requires more RAM for application services
 SRV03_VMID="$((VM_ID_START + 4))"
 SRV03_NAME="GOAD-SRV03"
 SRV03_CORES="2"
-SRV03_MEMORY="4096"
+SRV03_MEMORY="5120"   # Official GOAD spec (higher for services)
 SRV03_DISK_SIZE="60G"
 SRV03_IP="192.168.50.23"
 SRV03_OS_TYPE="win2016"
