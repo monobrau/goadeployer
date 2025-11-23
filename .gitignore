@@ -1,0 +1,61 @@
+# GOAD Proxmox Installer - .gitignore
+
+# Configuration files (contain secrets)
+goad_config.conf
+
+# Log files
+logs/
+*.log
+
+# GOAD repository (downloaded during installation)
+GOAD/
+
+# Packer builds
+packer/output/
+packer/*.box
+packer/packer_cache/
+
+# Connection guide (generated)
+CONNECTION_GUIDE.md
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Temporary files
+*.tmp
+.*.swp
+.*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Ansible
+*.retry
+.ansible/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# SSH keys (if generated)
+*.pem
+*.key
+id_rsa*
+
+# ISO files (if downloaded locally)
+*.iso

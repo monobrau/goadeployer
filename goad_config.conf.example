@@ -1,0 +1,207 @@
+################################################################################
+# GOAD Proxmox Installer - Configuration File
+#
+# Copy this file to goad_config.conf and update the values below
+# Command: cp goad_config.conf.example goad_config.conf
+################################################################################
+
+################################################################################
+# Proxmox Configuration
+################################################################################
+
+# Proxmox host IP or FQDN
+PROXMOX_HOST="192.168.1.100"
+
+# Proxmox node name (usually 'pve' or your custom node name)
+PROXMOX_NODE="pve"
+
+# Proxmox API credentials
+# Format: user@realm!tokenname
+PROXMOX_API_USER="root@pam!goad"
+PROXMOX_API_TOKEN_NAME="goad"
+PROXMOX_API_TOKEN_SECRET="your-api-token-secret-here"
+
+# Storage configuration
+PROXMOX_STORAGE="nfs-storage"
+
+# VM storage settings
+VM_STORAGE_TYPE="nfs"
+VM_DISK_FORMAT="qcow2"
+
+################################################################################
+# Network Configuration
+################################################################################
+
+# VLAN configuration
+VLAN_ID="50"
+BRIDGE_NAME="vmbr50"
+
+# Physical interface to tag VLAN on (e.g., vmbr0, ens18)
+PARENT_INTERFACE="vmbr0"
+
+# Network settings for GOAD lab
+NETWORK_SUBNET="192.168.50.0/24"
+NETWORK_GATEWAY="192.168.50.1"
+NETWORK_DNS="192.168.50.10"
+
+# Internet access for VMs during setup
+# This should be the interface that has internet connectivity
+INTERNET_INTERFACE="vmbr0"
+ENABLE_NAT="true"
+
+################################################################################
+# VM Configuration - Full GOAD Lab (5 VMs)
+################################################################################
+
+# VM ID starting number (will increment for each VM)
+VM_ID_START="800"
+
+# VM resource allocation
+# Total required: ~38GB RAM, ~200GB disk
+
+# DC01 - sevenkingdoms.local (Domain Controller)
+DC01_VMID="${VM_ID_START}"
+DC01_NAME="GOAD-DC01"
+DC01_CORES="2"
+DC01_MEMORY="4096"
+DC01_DISK_SIZE="60G"
+DC01_IP="192.168.50.10"
+DC01_OS_TYPE="win2019"
+
+# DC02 - north.sevenkingdoms.local (Domain Controller)
+DC02_VMID="$((VM_ID_START + 1))"
+DC02_NAME="GOAD-DC02"
+DC02_CORES="2"
+DC02_MEMORY="4096"
+DC02_DISK_SIZE="60G"
+DC02_IP="192.168.50.11"
+DC02_OS_TYPE="win2019"
+
+# DC03 - essos.local (Domain Controller)
+DC03_VMID="$((VM_ID_START + 2))"
+DC03_NAME="GOAD-DC03"
+DC03_CORES="2"
+DC03_MEMORY="4096"
+DC03_DISK_SIZE="60G"
+DC03_IP="192.168.50.12"
+DC03_OS_TYPE="win2019"
+
+# SRV02 - sevenkingdoms.local (Server)
+SRV02_VMID="$((VM_ID_START + 3))"
+SRV02_NAME="GOAD-SRV02"
+SRV02_CORES="2"
+SRV02_MEMORY="4096"
+SRV02_DISK_SIZE="60G"
+SRV02_IP="192.168.50.22"
+SRV02_OS_TYPE="win2019"
+
+# SRV03 - essos.local (Server)
+SRV03_VMID="$((VM_ID_START + 4))"
+SRV03_NAME="GOAD-SRV03"
+SRV03_CORES="2"
+SRV03_MEMORY="4096"
+SRV03_DISK_SIZE="60G"
+SRV03_IP="192.168.50.23"
+SRV03_OS_TYPE="win2016"
+
+################################################################################
+# Windows Template Configuration
+################################################################################
+
+# Windows templates for VM creation
+# These will be downloaded and configured automatically
+
+# Windows Server 2019 template
+WIN2019_TEMPLATE_VMID="9000"
+WIN2019_TEMPLATE_NAME="windows-server-2019-template"
+WIN2019_ISO_URL="https://software-download.microsoft.com/download/pr/17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso"
+WIN2019_ISO_NAME="windows-server-2019.iso"
+
+# Windows Server 2016 template
+WIN2016_TEMPLATE_VMID="9001"
+WIN2016_TEMPLATE_NAME="windows-server-2016-template"
+WIN2016_ISO_URL="https://software-download.microsoft.com/download/pr/Windows_Server_2016_Datacenter_EVAL_en-us_14393_refresh.ISO"
+WIN2016_ISO_NAME="windows-server-2016.iso"
+
+# VirtIO drivers ISO (required for Windows on Proxmox)
+VIRTIO_ISO_URL="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
+VIRTIO_ISO_NAME="virtio-win.iso"
+
+################################################################################
+# GOAD Configuration
+################################################################################
+
+# GOAD variant to install
+GOAD_VARIANT="GOAD"  # Options: GOAD, GOAD-Light, SCCM, NHA
+
+# GOAD repository
+GOAD_REPO="https://github.com/Orange-Cyberdefense/GOAD.git"
+GOAD_BRANCH="main"
+
+# Provisioning method
+PROVISIONING_METHOD="ansible"  # Options: ansible, terraform
+
+################################################################################
+# Security Settings
+################################################################################
+
+# Default Windows administrator password
+# WARNING: Change this to a secure password
+WINDOWS_ADMIN_PASSWORD="Password123!"
+
+# Enable automatic Windows updates during setup
+ENABLE_WINDOWS_UPDATES="false"
+
+################################################################################
+# Advanced Settings
+################################################################################
+
+# Ansible configuration
+ANSIBLE_TIMEOUT="3600"
+ANSIBLE_FORKS="5"
+ANSIBLE_HOST_KEY_CHECKING="false"
+
+# Retry settings for network operations
+MAX_RETRIES="3"
+RETRY_DELAY="5"
+
+# Enable debug mode
+DEBUG="false"
+
+# Cleanup on failure
+CLEANUP_ON_FAILURE="false"
+
+################################################################################
+# WireGuard VPN Configuration (Optional)
+################################################################################
+
+# Configure WireGuard for external access
+SETUP_WIREGUARD="false"
+
+# WireGuard settings
+WG_INTERFACE="wg0"
+WG_PORT="51820"
+WG_SERVER_IP="10.0.0.1/24"
+WG_CLIENT_IP="10.0.0.2/32"
+
+################################################################################
+# Notification Settings (Optional)
+################################################################################
+
+# Enable notifications on completion
+ENABLE_NOTIFICATIONS="false"
+
+# Notification methods: email, slack, webhook
+NOTIFICATION_METHOD="email"
+
+# Email settings
+EMAIL_TO="admin@example.com"
+EMAIL_FROM="goad-installer@example.com"
+SMTP_SERVER="smtp.example.com"
+SMTP_PORT="587"
+
+# Slack webhook
+SLACK_WEBHOOK_URL=""
+
+# Custom webhook
+WEBHOOK_URL=""
