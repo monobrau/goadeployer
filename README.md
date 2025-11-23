@@ -1,567 +1,753 @@
 # GOAD Proxmox Installer
 
-Automated installation and configuration script for deploying [Game Of Active Directory (GOAD)](https://github.com/Orange-Cyberdefense/GOAD) on Proxmox VE 9.1.
+> Automated deployment of [Game Of Active Directory (GOAD)](https://github.com/Orange-Cyberdefense/GOAD) on Proxmox VE 9.1
 
-## Table of Contents
+**GOAD** is a vulnerable Active Directory lab environment designed for penetration testing practice and learning AD attack techniques. This installer provides a simplified alternative to the [official Terraform-based method](https://github.com/Orange-Cyberdefense/GOAD) with enhanced automation.
 
-- [Overview](#overview)
-- [Features](#features)
-- [Requirements](#requirements)
-- [Quick Start](#quick-start)
-- [Detailed Installation](#detailed-installation)
-- [Configuration](#configuration)
-- [Network Architecture](#network-architecture)
-- [VM Details](#vm-details)
-- [Troubleshooting](#troubleshooting)
-- [Cleanup](#cleanup)
-- [FAQ](#faq)
+[![Lab Type](https://img.shields.io/badge/Lab-5_VMs_|_2_Forests_|_3_Domains-blue)]()
+[![RAM Required](https://img.shields.io/badge/RAM-20GB-orange)]()
+[![Time](https://img.shields.io/badge/Setup_Time-4--6_hours-green)]()
+[![Proxmox](https://img.shields.io/badge/Proxmox-9.1-red)]()
 
-## Overview
+---
 
-This project provides a complete automation suite for deploying the GOAD (Game Of Active Directory) vulnerable Active Directory lab environment on Proxmox VE. GOAD is designed for penetration testing practice and learning Active Directory attack techniques.
+## 🎯 What You Get
 
-> **Official GOAD Repository:** https://github.com/Orange-Cyberdefense/GOAD
+| Component | Details |
+|-----------|---------|
+| **VMs** | 5 Windows Servers (2016/2019) |
+| **Domains** | sevenkingdoms.local, north.sevenkingdoms.local, essos.local |
+| **Network** | Isolated VLAN 50 (192.168.50.0/24) |
+| **Vulnerabilities** | 25+ AD attack techniques (Kerberoasting, DCSync, etc.) |
+| **Setup** | Fully automated with one command |
 
-The full GOAD lab consists of:
-- **5 Windows VMs** across **2 forests** and **3 domains**
-- Realistic Active Directory misconfigurations
-- Multiple attack vectors for practice
-- Isolated network environment
+---
 
-### Installation Methods
+## ⚡ Quick Start
 
-GOAD officially supports Proxmox through their Terraform provider. This repository provides an **alternative installation method** with enhanced automation and ease of use for beginners. See [INSTALLATION_METHODS.md](INSTALLATION_METHODS.md) for a comparison of approaches.
+### Prerequisites
+- Proxmox VE 9.1+ with NFS storage
+- 20GB RAM minimum (96GB system recommended)
+- 10 CPU cores minimum
+- 300GB storage
+- Windows Server ISOs (2016 & 2019)
 
-## Features
-
-- ✅ **Automated Installation**: Complete automation from start to finish
-- ✅ **Prerequisites Check**: Validates system requirements before installation
-- ✅ **Network Configuration**: Automatic VLAN and bridge setup
-- ✅ **VM Provisioning**: Creates and configures all required VMs
-- ✅ **Progress Tracking**: Real-time installation progress with logs
-- ✅ **Rollback Support**: Complete cleanup/rollback functionality
-- ✅ **WireGuard VPN**: Guides for secure external access
-- ✅ **Comprehensive Logging**: Detailed logs for troubleshooting
-- ✅ **Configuration File**: Easy customization via config file
-
-## Requirements
-
-### Hardware Requirements
-
-- **CPU**: 20+ cores recommended (10 cores minimum)
-- **RAM**: 96GB total (20GB minimum for GOAD VMs + overhead)
-  - Based on official GOAD specs: DC01(3GB) + DC02(3GB) + DC03(3GB) + SRV02(6GB) + SRV03(5GB) = 20GB
-- **Storage**: 300GB free space on NFS storage
-- **Network**: Dedicated network interface for VLAN 50
-
-> **Note:** RAM requirements are based on the official GOAD Proxmox provider specifications. SRV02 and SRV03 require more RAM than DCs due to running MSSQL, IIS, and other services.
-
-### Software Requirements
-
-- **Proxmox VE**: Version 9.1 or later
-- **Operating System**: Debian-based Linux for control machine
-- **Network**: NFS storage configured on Proxmox
-
-### Control Machine Requirements
-
-The machine running the installer needs:
-- Ansible 2.9+
-- Python 3.8+
-- Git
-- curl, jq
-- sshpass
-- Proxmox API access
-
-## Quick Start
-
-### 1. Clone the Repository
+### Installation (3 steps)
 
 ```bash
-git clone https://github.com/yourusername/goadeployer.git
+# 1. Clone and configure
+git clone <this-repo>
 cd goadeployer
-```
-
-### 2. Configure Proxmox API Access
-
-First, create an API token in Proxmox:
-
-1. Login to Proxmox web interface
-2. Navigate to: **Datacenter → Permissions → API Tokens**
-3. Click **Add** and create a token named `goad` for user `root@pam`
-4. **Important**: Copy the token secret, it's only shown once!
-5. Set permissions: **Datacenter → Permissions → Add → User Permission**
-   - Path: `/`
-   - User: `root@pam`
-   - Role: `Administrator`
-
-### 3. Create Configuration File
-
-```bash
 cp goad_config.conf.example goad_config.conf
-nano goad_config.conf
-```
+nano goad_config.conf  # Update: PROXMOX_HOST, API token, storage
 
-Update the following required values:
-
-```bash
-PROXMOX_HOST="192.168.1.100"          # Your Proxmox IP
-PROXMOX_NODE="pve"                    # Your Proxmox node name
-PROXMOX_API_USER="root@pam!goad"
-PROXMOX_API_TOKEN_SECRET="your-secret-here"  # From step 2
-PROXMOX_STORAGE="nfs-storage"         # Your NFS storage name
-```
-
-### 4. Run the Installer
-
-```bash
-chmod +x install_goad_proxmox.sh
-chmod +x scripts/*.sh
+# 2. Run installer
+chmod +x install_goad_proxmox.sh scripts/*.sh
 ./install_goad_proxmox.sh
+
+# 3. Check status
+./scripts/check_status.sh
 ```
 
-The installer will:
-1. ✅ Check prerequisites
-2. ✅ Setup network (VLAN 50, bridge vmbr50)
-3. ✅ Download GOAD repository
-4. ✅ Create 5 VMs
-5. ✅ Provide Windows installation instructions
-6. ⏳ Deploy GOAD with Ansible (after Windows installation)
+**That's it!** The installer handles network setup, VM creation, and GOAD deployment.
 
-## Detailed Installation
+> 📘 **First time?** See [QUICKSTART.md](QUICKSTART.md) for detailed step-by-step guide.
 
-### Phase 1: Preparation
+---
 
-1. **Verify Proxmox Resources**
-   ```bash
-   # On Proxmox host, check available resources
-   pvesh get /nodes/pve/status
-   ```
+## 📋 Installation Methods
 
-2. **Configure NFS Storage**
+<table>
+<tr>
+<th>This Installer</th>
+<th>Official GOAD</th>
+</tr>
+<tr>
+<td>
 
-   If you haven't already configured NFS storage:
-   ```bash
-   # Example: Add NFS storage via CLI
-   pvesm add nfs nfs-storage --server 192.168.1.50 --export /mnt/nfs --content images,vztmpl,iso
-   ```
+✅ No templates needed
+✅ Complete automation
+✅ Network auto-config
+✅ Progress tracking
+✅ Easy cleanup
+✅ Better for learning
 
-3. **Upload Windows ISOs**
+</td>
+<td>
 
-   Download Windows Server evaluation ISOs:
-   - [Windows Server 2019](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2019)
-   - [Windows Server 2016](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2016)
-   - [VirtIO Drivers](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso)
+✅ Official support
+✅ Faster (with templates)
+✅ Regular updates
+✅ Production-ready
+✅ Terraform-based
+✅ Community support
 
-   Upload to Proxmox: **Node → Storage → ISO Images → Upload**
+</td>
+</tr>
+<tr>
+<td><b>Best for:</b> First-time users, learning</td>
+<td><b>Best for:</b> Experienced users, teams</td>
+</tr>
+</table>
 
-### Phase 2: Network Setup
+**Compare methods:** See [INSTALLATION_METHODS.md](INSTALLATION_METHODS.md)
 
-The installer automatically creates:
+---
 
-```
-┌─────────────────────────────────────────┐
-│         Internet                        │
-└───────────┬─────────────────────────────┘
-            │
-     ┌──────▼──────┐
-     │   vmbr0     │  (Main bridge)
-     │  (NAT out)  │
-     └──────┬──────┘
-            │
-     ┌──────▼──────┐
-     │   vmbr50    │  (GOAD bridge)
-     │  VLAN 50    │
-     │ 192.168.50.1│
-     └──────┬──────┘
-            │
-    ┌───────┴────────┬──────┬──────┬──────┐
-    │                │      │      │      │
-┌───▼───┐   ┌───▼───┐ ┌──▼──┐ ┌──▼──┐ ┌──▼──┐
-│ DC01  │   │ DC02  │ │DC03 │ │SRV02│ │SRV03│
-│ .10   │   │ .11   │ │.12  │ │ .22 │ │ .23 │
-└───────┘   └───────┘ └─────┘ └─────┘ └─────┘
-```
-
-### Phase 3: Windows Installation
-
-After VM creation, you need to install Windows on each VM. Two options:
-
-#### Option A: Manual Installation (Recommended for beginners)
-
-1. **Access VM Console** via Proxmox web UI
-2. **Install Windows Server**:
-   - Select "Windows Server 2019 Standard Evaluation (Desktop Experience)"
-   - During disk selection, load VirtIO drivers from second CD-ROM
-   - Complete installation
-3. **Configure Network** with static IP:
-   ```powershell
-   # In Windows PowerShell (run as Administrator)
-   New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 192.168.50.10 -PrefixLength 24 -DefaultGateway 192.168.50.1
-   Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 192.168.50.10
-   ```
-4. **Enable WinRM**:
-   ```powershell
-   winrm quickconfig -force
-   Set-Item WSMan:\localhost\Service\Auth\Basic -Value $true
-   Set-Item WSMan:\localhost\Service\AllowUnencrypted -Value $true
-   New-NetFirewallRule -Name "WinRM HTTP" -DisplayName "WinRM HTTP" -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 5985
-   ```
-5. **Set Administrator Password**: `Password123!`
-
-Repeat for all 5 VMs with their respective IP addresses.
-
-#### Option B: Automated with Packer
-
-```bash
-cd packer
-
-# Install Packer
-wget https://releases.hashicorp.com/packer/1.9.4/packer_1.9.4_linux_amd64.zip
-unzip packer_1.9.4_linux_amd64.zip
-sudo mv packer /usr/local/bin/
-
-# Build Windows Server 2019 template
-packer build -var "proxmox_host=${PROXMOX_HOST}" \
-             -var "proxmox_node=${PROXMOX_NODE}" \
-             -var "proxmox_api_user=${PROXMOX_API_USER}" \
-             -var "proxmox_api_token=${PROXMOX_API_TOKEN_SECRET}" \
-             windows-server-2019.pkr.hcl
-```
-
-### Phase 4: GOAD Deployment
-
-Once all VMs have Windows installed and WinRM enabled:
-
-```bash
-# Resume installation (if you stopped after Windows installation)
-./install_goad_proxmox.sh --skip-vm-creation
-
-# Or manually run GOAD provisioning
-cd GOAD/ansible
-ansible-playbook -i ../ad/GOAD/data/inventory main.yml
-```
-
-This phase takes **1-2 hours** and will:
-- Configure Active Directory domains
-- Create users, groups, and organizational units
-- Set up vulnerable configurations
-- Configure trust relationships
-
-## Configuration
-
-### Main Configuration File: `goad_config.conf`
-
-Key configuration options:
-
-```bash
-# Proxmox Settings
-PROXMOX_HOST="192.168.1.100"
-PROXMOX_NODE="pve"
-PROXMOX_STORAGE="nfs-storage"
-
-# Network Settings
-VLAN_ID="50"
-BRIDGE_NAME="vmbr50"
-NETWORK_SUBNET="192.168.50.0/24"
-NETWORK_GATEWAY="192.168.50.1"
-
-# VM Resources
-DC01_CORES="2"
-DC01_MEMORY="4096"
-DC01_DISK_SIZE="60G"
-
-# Security
-WINDOWS_ADMIN_PASSWORD="Password123!"
-```
+## 🏗️ Lab Architecture
 
 ### VM Specifications
-
 Based on official GOAD Proxmox provider:
 
-| VM    | Role                          | OS      | IP             | RAM  | CPU | Disk |
-|-------|-------------------------------|---------|----------------|------|-----|------|
-| DC01  | Domain Controller (SK)        | 2019    | 192.168.50.10  | 3GB  | 2   | 60GB |
-| DC02  | Domain Controller (North.SK)  | 2019    | 192.168.50.11  | 3GB  | 2   | 60GB |
-| DC03  | Domain Controller (Essos)     | 2016    | 192.168.50.12  | 3GB  | 2   | 60GB |
-| SRV02 | Server (SK) - MSSQL, IIS      | 2019    | 192.168.50.22  | 6GB* | 2   | 60GB |
-| SRV03 | Server (Essos) - Services     | 2016    | 192.168.50.23  | 5GB* | 2   | 60GB |
+| VM | Role | OS | IP | RAM | CPU | Disk |
+|----|------|----|-------|-----|-----|------|
+| **DC01** | Domain Controller | 2019 | 192.168.50.10 | 3GB | 2 | 60GB |
+| **DC02** | Child DC (north.*) | 2019 | 192.168.50.11 | 3GB | 2 | 60GB |
+| **DC03** | Domain Controller | 2016 | 192.168.50.12 | 3GB | 2 | 60GB |
+| **SRV02** | MSSQL + IIS + ADCS | 2019 | 192.168.50.22 | 6GB* | 2 | 60GB |
+| **SRV03** | Application Server | 2016 | 192.168.50.23 | 5GB* | 2 | 60GB |
 
-**Total**: 20GB RAM, 10 CPU cores, 300GB disk
+**Total:** 20GB RAM, 10 cores, 300GB disk
 
-*SRV02 and SRV03 require more RAM for running MSSQL Server, IIS, and application services.
-
-## Network Architecture
-
-### VLAN 50 Details
-
-- **Network**: 192.168.50.0/24
-- **Gateway**: 192.168.50.1 (vmbr50 on Proxmox)
-- **DNS**: 192.168.50.10 (DC01)
-- **DHCP**: Disabled (static IPs only)
-
-### Internet Access
-
-NAT is configured from vmbr50 → vmbr0 for:
-- Windows updates during installation
-- Downloading required tools
-- GOAD provisioning
-
-### External Access via WireGuard
-
-See [CONNECTION_GUIDE.md](CONNECTION_GUIDE.md) for WireGuard VPN setup.
-
-## VM Details
+> *SRV02/SRV03 need more RAM for database and application services
 
 ### Domain Structure
 
 ```
-Forest: sevenkingdoms.local
-├── Domain: sevenkingdoms.local (DC01)
-└── Child Domain: north.sevenkingdoms.local (DC02)
+sevenkingdoms.local (Forest)
+├── DC01 (Root DC)
+└── north.sevenkingdoms.local (Child Domain)
+    └── DC02 (Child DC)
+    └── SRV02 (Server)
 
-Forest: essos.local
-└── Domain: essos.local (DC03)
+essos.local (Forest)
+└── DC03 (Root DC)
+    └── SRV03 (Server)
 
-Forest Trust: sevenkingdoms.local ↔ essos.local
+Trust: sevenkingdoms.local ↔ essos.local
 ```
 
-### Default Credentials
+### Network Topology
 
-| Account | Username | Password | Domain |
-|---------|----------|----------|--------|
-| Domain Admin | administrator | Password123! | sevenkingdoms.local |
-| Domain Admin | administrator | Password123! | essos.local |
+```
+Internet → vmbr0 (NAT) → vmbr50 (VLAN 50) → GOAD VMs
+           Proxmox       192.168.50.1/24     .10, .11, .12, .22, .23
+```
 
-**Note**: GOAD creates many additional users with various privilege levels. See GOAD documentation for complete user list.
+---
 
-### Attack Vectors
+## ⚙️ Configuration
 
-The GOAD lab includes vulnerabilities such as:
-- Kerberoasting
-- AS-REP Roasting
-- DCSync
-- Unconstrained Delegation
-- Constrained Delegation
-- NTLM Relay
-- GPP Passwords
-- ACL Abuse
-- And many more...
+### Minimal Config (Required)
 
-## Troubleshooting
+Edit `goad_config.conf`:
 
-### Installation Issues
+```bash
+# Proxmox connection
+PROXMOX_HOST="192.168.1.100"      # Your Proxmox IP
+PROXMOX_NODE="pve"                # Node name
+PROXMOX_STORAGE="nfs-storage"     # Storage name
 
-**Problem**: Cannot connect to Proxmox API
+# API credentials (create in Proxmox UI)
+PROXMOX_API_USER="root@pam!goad"
+PROXMOX_API_TOKEN_SECRET="xxxx"   # From Proxmox API Tokens
+
+# Network (defaults are fine for most users)
+VLAN_ID="50"
+NETWORK_SUBNET="192.168.50.0/24"
+```
+
+### Create API Token
+
+In Proxmox Web UI:
+1. **Datacenter → Permissions → API Tokens**
+2. Click **Add**
+3. User: `root@pam`, Token ID: `goad`
+4. **Privilege Separation:** Uncheck ✓
+5. Copy the secret (shown once!)
+
+### Optional: Upload Windows ISOs
+
+Download evaluation ISOs (180-day trial):
+- [Windows Server 2019](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2019)
+- [Windows Server 2016](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2016)
+- [VirtIO Drivers](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso)
+
+Upload via: **Proxmox → Node → Storage → ISO Images → Upload**
+
+---
+
+## 🚀 Usage
+
+### Main Commands
+
+```bash
+# Install GOAD
+./install_goad_proxmox.sh
+
+# Check installation status
+./scripts/check_status.sh
+
+# Cleanup everything
+./scripts/cleanup_goad.sh --complete
+```
+
+### Windows Installation
+
+After the installer creates VMs, you'll need to install Windows on each VM:
+
+**Quick Method (per VM):**
+1. Open VM console in Proxmox
+2. Install Windows Server
+3. Load VirtIO drivers (from 2nd CD-ROM)
+4. Set Administrator password: `Password123!`
+5. Configure network with PowerShell:
+
+```powershell
+# Replace .10 with correct IP for each VM
+New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 192.168.50.10 -PrefixLength 24 -DefaultGateway 192.168.50.1
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 192.168.50.10
+
+# Enable WinRM for Ansible
+winrm quickconfig -force
+Set-Item WSMan:\localhost\Service\Auth\Basic -Value $true
+Set-Item WSMan:\localhost\Service\AllowUnencrypted -Value $true
+```
+
+**VM IP Mapping:** DC01=.10, DC02=.11, DC03=.12, SRV02=.22, SRV03=.23
+
+### Accessing Your Lab
+
+**From Proxmox host:**
+```bash
+# RDP
+xfreerdp /v:192.168.50.10 /u:administrator@sevenkingdoms.local /p:Password123!
+
+# PowerShell Remoting
+evil-winrm -i 192.168.50.10 -u administrator -p 'Password123!' -d sevenkingdoms.local
+```
+
+**From external network:** Set up WireGuard VPN (see [CONNECTION_GUIDE.md](CONNECTION_GUIDE.md))
+
+---
+
+## 🔧 Troubleshooting
+
+<details>
+<summary><b>API Connection Failed</b></summary>
 
 ```bash
 # Test API connectivity
 curl -k -H "Authorization: PVEAPIToken=root@pam!goad=your-token" \
-  https://192.168.50.1:8006/api2/json/version
-```
+  https://YOUR_PROXMOX_IP:8006/api2/json/version
 
-**Problem**: Insufficient resources
+# Check token has permissions (should see JSON response)
+```
+</details>
+
+<details>
+<summary><b>Insufficient Resources</b></summary>
 
 ```bash
-# Check Proxmox resources
+# Check available resources
 pvesh get /nodes/pve/status
 free -h
 df -h
-```
 
-**Problem**: Network not accessible
+# Reduce VM RAM in goad_config.conf if needed
+```
+</details>
+
+<details>
+<summary><b>Network Issues</b></summary>
 
 ```bash
-# On Proxmox host
+# Verify bridge exists
 ip link show vmbr50
-ip addr show vmbr50
-iptables -t nat -L -n -v
+
+# Check NAT rules
+iptables -t nat -L -n -v | grep 192.168.50
+
+# Test connectivity from Proxmox
+ping 192.168.50.10
+```
+</details>
+
+<details>
+<summary><b>WinRM Connection Failed</b></summary>
+
+```bash
+# Test from installer machine
+nc -zv 192.168.50.10 5985
+
+# On Windows VM, check WinRM
+winrm enumerate winrm/config/listener
+Get-NetFirewallRule -Name "WinRM*"
+```
+</details>
+
+<details>
+<summary><b>Ansible Playbook Errors</b></summary>
+
+```bash
+# Test connectivity
+cd GOAD/ansible
+ansible all -i ../ad/GOAD/data/inventory -m win_ping
+
+# Run with verbose output
+ansible-playbook -i ../ad/GOAD/data/inventory main.yml -vvv
+```
+</details>
+
+**More help:** Check `logs/goad_install_*.log` or [full troubleshooting guide](#detailed-troubleshooting)
+
+---
+
+## 🧹 Cleanup
+
+```bash
+# Complete removal (VMs + network + everything)
+./scripts/cleanup_goad.sh --complete
+
+# Interactive menu (choose what to remove)
+./scripts/cleanup_goad.sh
+
+# Remove only VMs
+./scripts/cleanup_goad.sh --vms-only
+```
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [QUICKSTART.md](QUICKSTART.md) | Step-by-step beginner guide |
+| [INSTALLATION_METHODS.md](INSTALLATION_METHODS.md) | Compare installation approaches |
+| [OFFICIAL_GOAD_INTEGRATION.md](OFFICIAL_GOAD_INTEGRATION.md) | Technical details & compatibility |
+| [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | Architecture & components |
+| [CONNECTION_GUIDE.md](CONNECTION_GUIDE.md) | VPN & remote access (auto-generated) |
+
+---
+
+## ❓ FAQ
+
+**Q: How long does installation take?**
+A: 4-6 hours total (mostly Windows installation). Automated parts take ~30 min.
+
+**Q: Do I need Windows licenses?**
+A: No, use evaluation editions (180-day trial).
+
+**Q: Can I use local storage instead of NFS?**
+A: Yes, set `PROXMOX_STORAGE="local-lvm"` in config.
+
+**Q: Can I access from outside my network?**
+A: Yes, via WireGuard VPN. See [CONNECTION_GUIDE.md](CONNECTION_GUIDE.md).
+
+**Q: How do I update GOAD?**
+A: `cd GOAD && git pull && cd ansible && ansible-playbook -i ../ad/GOAD/data/inventory main.yml`
+
+**Q: Can I deploy GOAD-Light instead?**
+A: Yes, edit `goad_config.conf`: `GOAD_VARIANT="GOAD-Light"` and adjust VM count.
+
+**Q: What vulnerabilities are included?**
+A: Kerberoasting, AS-REP Roasting, DCSync, Unconstrained Delegation, Constrained Delegation, NTLM Relay, GPP Passwords, ACL Abuse, and 20+ more.
+
+---
+
+## ⚠️ Security Warning
+
+**GOAD is intentionally vulnerable!**
+
+- ❌ **DO NOT** expose to the internet
+- ❌ **DO NOT** connect to production networks
+- ✅ **ONLY** access via secure VPN
+- ✅ Keep isolated on VLAN 50
+
+This is a learning environment for authorized penetration testing practice only.
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+---
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE)
+
+GOAD itself: © Orange Cyberdefense (separate license)
+
+---
+
+## 🙏 Acknowledgments
+
+- **[Orange Cyberdefense](https://github.com/Orange-Cyberdefense)** for creating GOAD
+- **Proxmox** team for Proxmox VE
+- All contributors
+
+---
+
+## 🔗 Resources
+
+- [Official GOAD Repository](https://github.com/Orange-Cyberdefense/GOAD)
+- [GOAD Documentation](https://github.com/Orange-Cyberdefense/GOAD/wiki)
+- [Proxmox Documentation](https://pve.proxmox.com/pve-docs/)
+- [WireGuard Quick Start](https://www.wireguard.com/quickstart/)
+
+---
+
+<div align="center">
+
+**Happy Hacking! 🎯**
+
+*Practice safely. Test ethically. Learn continuously.*
+
+</div>
+
+---
+
+## 📖 Detailed Sections
+
+<details>
+<summary><b>Detailed Installation Steps</b></summary>
+
+### Phase 1: Pre-Installation
+
+1. **Verify Proxmox Resources**
+   ```bash
+   pvesh get /nodes/pve/status
+   ```
+
+2. **Configure NFS Storage** (if not already done)
+   ```bash
+   pvesm add nfs nfs-storage --server 192.168.1.50 --export /mnt/nfs --content images,vztmpl,iso
+   ```
+
+3. **Upload ISOs** to Proxmox storage
+
+### Phase 2: Automated Setup
+
+The installer automatically:
+- ✅ Checks prerequisites (Ansible, Python, etc.)
+- ✅ Creates VLAN 50 bridge (vmbr50)
+- ✅ Configures NAT for internet access
+- ✅ Downloads GOAD repository
+- ✅ Creates 5 VMs with proper specs
+- ✅ Generates Ansible inventory
+
+### Phase 3: Windows Installation
+
+**Manual Installation (2-3 hours):**
+Repeat for each VM (DC01, DC02, DC03, SRV02, SRV03):
+
+1. Access VM console in Proxmox
+2. Boot from Windows ISO
+3. Select "Windows Server 20XX Standard Evaluation (Desktop Experience)"
+4. **Load VirtIO drivers** when selecting disk (from 2nd CD-ROM)
+5. Complete Windows installation
+6. Set Administrator password: `Password123!`
+7. Configure static IP (see PowerShell commands above)
+8. Enable WinRM (see PowerShell commands above)
+
+**Automated Installation with Packer (1 hour):**
+```bash
+cd packer
+packer build windows-server-2019.pkr.hcl
+```
+
+### Phase 4: GOAD Deployment
+
+Once all VMs are ready with WinRM enabled:
+
+```bash
+cd GOAD/ansible
+ansible-playbook -i ../ad/GOAD/data/inventory main.yml
+```
+
+This takes 1-2 hours and:
+- Creates AD domains and forests
+- Establishes trust relationships
+- Creates users, groups, OUs
+- Configures vulnerable settings
+- Installs MSSQL, IIS, ADCS
+- Sets up file shares and services
+
+### Phase 5: Verification
+
+```bash
+# Check all VMs are reachable
+./scripts/check_status.sh
+
+# Test Ansible connectivity
+cd GOAD/ansible
+ansible all -i ../ad/GOAD/data/inventory -m win_ping
+
+# Test domain resolution
+nslookup sevenkingdoms.local 192.168.50.10
+```
+
+</details>
+
+<details>
+<summary><b>Detailed Troubleshooting</b></summary>
+
+### Installer Issues
+
+**Prerequisite installation fails:**
+```bash
+# Manually install dependencies
+apt update
+apt install -y ansible git curl jq sshpass python3 python3-pip
+pip3 install proxmoxer requests pywinrm
+```
+
+**GOAD repository clone fails:**
+```bash
+# Check internet connectivity
+ping github.com
+
+# Clone manually
+git clone https://github.com/Orange-Cyberdefense/GOAD.git
+```
+
+### Network Issues
+
+**Bridge creation fails:**
+```bash
+# Check if bridge already exists
+ip link show vmbr50
+
+# Manually create bridge
+cat >> /etc/network/interfaces << EOF
+auto vmbr50
+iface vmbr50 inet static
+    address 192.168.50.1/24
+    bridge-ports none
+    bridge-stp off
+    bridge-fd 0
+EOF
+ifup vmbr50
+```
+
+**NAT not working:**
+```bash
+# Enable IP forwarding
+echo 1 > /proc/sys/net/ipv4/ip_forward
+sysctl -w net.ipv4.ip_forward=1
+
+# Add NAT rule
+iptables -t nat -A POSTROUTING -s 192.168.50.0/24 -o vmbr0 -j MASQUERADE
+iptables -A FORWARD -i vmbr50 -o vmbr0 -j ACCEPT
+iptables -A FORWARD -i vmbr0 -o vmbr50 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# Save rules
+apt install iptables-persistent
+iptables-save > /etc/iptables/rules.v4
 ```
 
 ### VM Issues
 
-**Problem**: Cannot connect to VMs via WinRM
-
+**VM won't start:**
 ```bash
-# Test WinRM connectivity
-nc -zv 192.168.50.10 5985
+# Check VM status
+qm status 800
 
-# From Windows VM, verify WinRM
-winrm enumerate winrm/config/listener
+# Check VM config
+qm config 800
+
+# Check storage
+pvesm status
 ```
 
-**Problem**: VMs cannot reach internet
-
+**Cannot access VM console:**
 ```bash
-# On Proxmox host, verify NAT
-iptables -t nat -L POSTROUTING -n -v
-cat /proc/sys/net/ipv4/ip_forward  # Should be 1
+# Restart VM
+qm stop 800
+qm start 800
+
+# Check QEMU process
+ps aux | grep kvm
 ```
+
+**Windows installation loops:**
+- Remove installation ISO from VM config
+- Only keep VirtIO ISO attached
 
 ### GOAD Deployment Issues
 
-**Problem**: Ansible playbook fails
-
+**Ansible timeout:**
 ```bash
-# Check Ansible connectivity
-cd GOAD/ansible
-ansible all -i ../ad/GOAD/data/inventory -m win_ping
+# Increase timeouts in ansible.cfg
+[defaults]
+timeout = 3600
 
-# Enable verbose output
-ansible-playbook -i ../ad/GOAD/data/inventory main.yml -vvv
+[winrm]
+operation_timeout_sec = 600
+read_timeout_sec = 700
 ```
 
-**Problem**: Domain trust issues
-
+**Domain creation fails:**
 ```powershell
-# On DC01, verify trust
+# On DC01, check DC promotion
+Get-WindowsFeature AD-Domain-Services
+Get-ADDomainController
+```
+
+**Trust relationship fails:**
+```powershell
+# On DC01
 nltest /domain_trusts
+nltest /sc_query:essos.local
+
+# Reset trust if needed
+netdom trust sevenkingdoms.local /d:essos.local /remove
 ```
 
-### Logs
-
-Check installation logs:
+**Services not starting:**
 ```bash
-# Latest installation log
-ls -lt logs/
-tail -f logs/goad_install_YYYYMMDD_HHMMSS.log
+# Check Ansible logs
+tail -f logs/goad_install_*.log
+
+# Verify services on Windows
+Get-Service | Where-Object {$_.Name -like "*SQL*"}
+Get-Website
 ```
 
-## Cleanup
+</details>
 
-### Complete Cleanup
+<details>
+<summary><b>Advanced Configuration</b></summary>
 
-Remove everything (VMs, network, configuration):
+### Custom Network Range
 
+Edit `goad_config.conf`:
 ```bash
-./scripts/cleanup_goad.sh --complete
+NETWORK_SUBNET="10.0.50.0/24"
+NETWORK_GATEWAY="10.0.50.1"
+DC01_IP="10.0.50.10"
+DC02_IP="10.0.50.11"
+DC03_IP="10.0.50.12"
+SRV02_IP="10.0.50.22"
+SRV03_IP="10.0.50.23"
+NETWORK_DNS="10.0.50.10"
 ```
 
-### Selective Cleanup
-
-Interactive menu for selective cleanup:
-
-```bash
-./scripts/cleanup_goad.sh
-```
-
-Options:
-1. Complete cleanup
-2. Remove VMs only
-3. Remove network configuration only
-4. Remove GOAD repository only
-5. Remove log files only
-
-### Manual Cleanup
-
-If scripts fail, manual cleanup:
+### Custom VM Resources
 
 ```bash
-# Delete VMs
-for vmid in {800..804}; do
-  qm stop $vmid
-  qm destroy $vmid
-done
+# Reduce RAM (minimum viable)
+DC01_MEMORY="2048"
+DC02_MEMORY="2048"
+DC03_MEMORY="2048"
+SRV02_MEMORY="4096"
+SRV03_MEMORY="4096"
 
-# Remove bridge
-ip link set vmbr50 down
-ip link delete vmbr50
-
-# Remove NAT rules
-iptables -t nat -D POSTROUTING -s 192.168.50.0/24 -o vmbr0 -j MASQUERADE
+# Increase CPU for faster deployment
+DC01_CORES="4"
+SRV02_CORES="4"
 ```
 
-## FAQ
+### Multiple GOAD Instances
 
-### Q: How long does installation take?
+To run multiple GOAD labs:
 
-**A**:
-- VM creation: ~15 minutes
-- Windows installation (manual): ~30 minutes per VM = 2.5 hours
-- Windows installation (Packer): ~1 hour
-- GOAD provisioning: 1-2 hours
-
-**Total**: 4-6 hours depending on method
-
-### Q: Can I use a different network subnet?
-
-**A**: Yes, edit `goad_config.conf` and change `NETWORK_SUBNET`, `NETWORK_GATEWAY`, and all VM IP addresses.
-
-### Q: Can I run this on a different Proxmox version?
-
-**A**: The scripts are designed for Proxmox 9.1 but should work on 8.x with minor modifications.
-
-### Q: Do I need a license for Windows Server?
-
-**A**: No, you can use Windows Server Evaluation editions (180-day trial).
-
-### Q: Can I access the lab from outside my network?
-
-**A**: Yes, set up WireGuard VPN. See [CONNECTION_GUIDE.md](CONNECTION_GUIDE.md).
-
-### Q: How do I update GOAD?
-
-**A**:
 ```bash
-cd GOAD
-git pull
-cd ansible
-ansible-playbook -i ../ad/GOAD/data/inventory main.yml
+# Instance 1: VLAN 50, IPs .50.x
+VLAN_ID="50"
+NETWORK_SUBNET="192.168.50.0/24"
+VM_ID_START="800"
+
+# Instance 2: VLAN 60, IPs .60.x
+VLAN_ID="60"
+NETWORK_SUBNET="192.168.60.0/24"
+VM_ID_START="900"
 ```
 
-### Q: Can I create GOAD-Light instead?
+### WireGuard VPN Setup
 
-**A**: Yes, edit `goad_config.conf` and change `GOAD_VARIANT="GOAD-Light"`, then adjust VM configurations.
+**On Proxmox host:**
+```bash
+# Install WireGuard
+apt install wireguard
 
-### Q: What if I want to use local storage instead of NFS?
+# Generate keys
+wg genkey | tee privatekey | wg pubkey > publickey
 
-**A**: Change `PROXMOX_STORAGE="local-lvm"` in `goad_config.conf`.
+# Configure
+cat > /etc/wireguard/wg0.conf << EOF
+[Interface]
+Address = 10.0.0.1/24
+ListenPort = 51820
+PrivateKey = $(cat privatekey)
 
-## Security Warning
+PostUp = iptables -A FORWARD -i wg0 -o vmbr50 -j ACCEPT
+PostUp = iptables -A FORWARD -i vmbr50 -o wg0 -j ACCEPT
+PostUp = iptables -t nat -A POSTROUTING -o vmbr50 -j MASQUERADE
 
-⚠️ **IMPORTANT**: GOAD is a **vulnerable-by-design** environment for penetration testing practice.
+[Peer]
+PublicKey = <CLIENT_PUBLIC_KEY>
+AllowedIPs = 10.0.0.2/32
+EOF
 
-- **DO NOT** expose to the internet
-- **DO NOT** connect to production networks
-- **ONLY** access via secure VPN
-- Keep it isolated in VLAN 50
+# Start WireGuard
+systemctl enable wg-quick@wg0
+systemctl start wg-quick@wg0
+```
 
-## Resources
+**Client configuration:**
+```ini
+[Interface]
+PrivateKey = <CLIENT_PRIVATE_KEY>
+Address = 10.0.0.2/24
 
-- [GOAD GitHub Repository](https://github.com/Orange-Cyberdefense/GOAD)
-- [GOAD Documentation](https://github.com/Orange-Cyberdefense/GOAD/wiki)
-- [Proxmox VE Documentation](https://pve.proxmox.com/pve-docs/)
-- [WireGuard Documentation](https://www.wireguard.com/quickstart/)
+[Peer]
+PublicKey = <SERVER_PUBLIC_KEY>
+Endpoint = YOUR_PROXMOX_IP:51820
+AllowedIPs = 10.0.0.0/24, 192.168.50.0/24
+PersistentKeepalive = 25
+```
 
-## Contributing
+### Packer Automation
 
-Contributions are welcome! Please:
+Build Windows templates automatically:
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+```bash
+cd packer
 
-## License
+# Create variables file
+cat > proxmox.vars.hcl << EOF
+proxmox_host = "192.168.1.100"
+proxmox_node = "pve"
+proxmox_api_user = "root@pam!goad"
+proxmox_api_token = "your-token-here"
+EOF
 
-This project is provided as-is under the MIT License.
+# Build templates
+packer build -var-file=proxmox.vars.hcl windows-server-2019.pkr.hcl
+packer build -var-file=proxmox.vars.hcl windows-server-2016.pkr.hcl
+```
 
-GOAD itself is maintained by Orange Cyberdefense and has its own license.
+### Integration with Official GOAD
 
-## Support
+Use our network setup with official GOAD Terraform:
 
-For issues:
-1. Check [Troubleshooting](#troubleshooting) section
-2. Review logs in `logs/` directory
-3. Open an issue on GitHub
+```bash
+# 1. Use our network setup
+./scripts/setup_network.sh
 
-## Acknowledgments
+# 2. Switch to official GOAD
+cd /path/to/GOAD
+./goad.sh -t install -p proxmox -l GOAD
 
-- **Orange Cyberdefense** for creating GOAD
-- **Proxmox** team for Proxmox VE
-- All contributors to this project
+# 3. Use our status checker
+cd /path/to/goadeployer
+./scripts/check_status.sh
+```
 
----
-
-**Happy Hacking! 🎯**
-
-*Remember: This is a learning environment. Always practice ethical hacking and obtain proper authorization before testing real systems.*
+</details>
