@@ -20,8 +20,7 @@ if (-not $isAdmin) {
     exit 1
 }
 
-$computerName = $env:COMPUTERNAME
-Write-Host "[INFO] Configuring WinRM on $computerName..." -ForegroundColor Green
+Write-Host "[INFO] Configuring WinRM..." -ForegroundColor Green
 Write-Host ""
 
 # Step 1: Enable WinRM service
@@ -111,8 +110,9 @@ Write-Host "║              WinRM Configuration Complete!                      
 Write-Host "╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
 Write-Host "Test WinRM connectivity:" -ForegroundColor Yellow
-Write-Host "  From Linux: winrs -r:http://$computerName:5985 -u:Administrator -p:$Password hostname" -ForegroundColor White
-Write-Host "  From Windows: winrs -r:http://localhost:5985 -u:Administrator -p:$Password hostname" -ForegroundColor White
+$testCmd = "winrs -r:http://localhost:5985 -u:Administrator -p:" + $Password + " hostname"
+Write-Host "  From Windows: $testCmd" -ForegroundColor White
+Write-Host "  From Linux: winrs -r:http://<VM_IP>:5985 -u:Administrator -p:$Password hostname" -ForegroundColor White
 Write-Host ""
 Write-Host "Test with Ansible:" -ForegroundColor Yellow
 Write-Host "  ansible all -i inventory -m win_ping" -ForegroundColor White
