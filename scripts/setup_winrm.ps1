@@ -54,7 +54,7 @@ try {
 }
 
 # Step 4: Increase memory limit for WinRM sessions
-Write-Host "[STEP 4/6] Configuring WinRM memory limits..." -ForegroundColor Yellow
+Write-Host "[STEP 4/7] Configuring WinRM memory limits..." -ForegroundColor Yellow
 try {
     winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="512"}' | Out-Null
     Write-Host "[SUCCESS] Memory limits configured" -ForegroundColor Green
@@ -62,9 +62,32 @@ try {
     Write-Host "[WARNING] Failed to configure memory limits: $_" -ForegroundColor Yellow
 }
 
-# Step 5: Configure Windows Firewall
+# Step 5: Enable WinRM HTTPS listener
+Write-Host "[STEP 5/7] Enabling WinRM HTTPS listener..." -ForegroundColor Yellow
+try {
+    # Check if HTTPS listener already exists
+    $httpsListener = winrm enumerate winrm/config/Listener | Select-String -Pattern "Transport.*HTTPS"
+    
+    if (-not $httpsListener) {
+        # Create self-signed certificate for HTTPS
+        $computerName = $env:COMPUTERNAME
+        $cert = New-SelfSignedCertificate -DnsName $computerName -CertStoreLocation Cert:\LocalMachine\My -NotAfter (Get-Date).AddYears(10)
+        
+        # Create HTTPS listener
+        $thumbprint = $cert.Thumbprint
+        winrm create winrm/config/Listener?Address=*+Transport=HTTPS "@{Hostname=`"$computerName`";CertificateThumbprint=`"$thumbprint`"}" | Out-Null
+        Write-Host "[SUCCESS] WinRM HTTPS listener enabled with certificate thumbprint: $thumbprint" -ForegroundColor Green
+    } else {
+        Write-Host "[INFO] WinRM HTTPS listener already exists" -ForegroundColor Cyan
+    }
+} catch {
+    Write-Host "[WARNING] Failed to enable WinRM HTTPS listener: $_" -ForegroundColor Yellow
+    Write-Host "[INFO] You can enable HTTPS manually or use HTTP (port 5985) instead" -ForegroundColor Cyan
+}
+
+# Step 6: Configure Windows Firewall
 if (-not $SkipFirewall) {
-    Write-Host "[STEP 5/6] Configuring Windows Firewall rules..." -ForegroundColor Yellow
+    Write-Host "[STEP 6/7] Configuring Windows Firewall rules..." -ForegroundColor Yellow
     try {
         # Check if rules already exist
         $httpRule = Get-NetFirewallRule -Name "WinRM HTTP" -ErrorAction SilentlyContinue
@@ -87,11 +110,11 @@ if (-not $SkipFirewall) {
         Write-Host "[WARNING] Failed to configure firewall rules: $_" -ForegroundColor Yellow
     }
 } else {
-    Write-Host '[STEP 5/6] Skipping firewall configuration (--SkipFirewall specified)' -ForegroundColor Yellow
+    Write-Host '[STEP 6/7] Skipping firewall configuration (--SkipFirewall specified)' -ForegroundColor Yellow
 }
 
-# Step 6: Verify WinRM configuration
-Write-Host "[STEP 6/6] Verifying WinRM configuration..." -ForegroundColor Yellow
+# Step 7: Verify WinRM configuration
+Write-Host "[STEP 7/7] Verifying WinRM configuration..." -ForegroundColor Yellow
 Write-Host ""
 
 $serviceConfig = winrm get winrm/config/service
@@ -103,6 +126,10 @@ $serviceConfig | Select-String -Pattern "AllowUnencrypted|RootSDDL" | ForEach-Ob
 Write-Host ""
 Write-Host "WinRM Authentication Configuration:" -ForegroundColor Cyan
 $authConfig | Select-String -Pattern "Basic|Kerberos|Certificate" | ForEach-Object { Write-Host "  $_" -ForegroundColor White }
+
+Write-Host ""
+Write-Host "WinRM Listeners:" -ForegroundColor Cyan
+winrm enumerate winrm/config/Listener | Select-String -Pattern "Address|Transport" | ForEach-Object { Write-Host "  $_" -ForegroundColor White }
 
 Write-Host ""
 Write-Host "╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
