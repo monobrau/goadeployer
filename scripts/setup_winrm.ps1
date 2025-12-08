@@ -20,7 +20,7 @@ if (-not $isAdmin) {
     exit 1
 }
 
-$computerName = hostname.exe
+$computerName = $env:COMPUTERNAME
 Write-Host "[INFO] Configuring WinRM on $computerName..." -ForegroundColor Green
 Write-Host ""
 
