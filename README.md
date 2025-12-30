@@ -182,8 +182,11 @@ Upload via: **Proxmox → Node → Storage → ISO Images → Upload**
 ### Main Commands
 
 ```bash
-# Install GOAD
+# Install GOAD (full installation)
 ./install_goad_proxmox.sh
+
+# Resume deployment after Windows installation
+./deploy_goad.sh
 
 # Check installation status
 ./scripts/check_status.sh
@@ -215,6 +218,27 @@ Set-Item WSMan:\localhost\Service\AllowUnencrypted -Value $true
 ```
 
 **VM IP Mapping:** DC01=.10, DC02=.11, DC03=.12, SRV02=.22, SRV03=.23
+
+### Continue GOAD Deployment
+
+After Windows is installed and WinRM is enabled on all VMs:
+
+```bash
+# Run the deployment script to continue with GOAD setup
+./deploy_goad.sh
+```
+
+This script will:
+- ✅ Verify prerequisites (Ansible, GOAD repo, dependencies)
+- ✅ Generate Ansible inventory
+- ✅ Test WinRM connectivity to all VMs
+- ✅ Deploy GOAD with Ansible (takes 1-2 hours)
+
+**Note:** Make sure all VMs have:
+- Windows Server installed
+- Static IPs configured
+- WinRM enabled
+- Firewall allows port 5985
 
 ### Accessing Your Lab
 

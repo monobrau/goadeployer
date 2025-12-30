@@ -98,14 +98,26 @@ Set-Item WSMan:\localhost\Service\AllowUnencrypted -Value $true
 
 ## Continue GOAD Deployment
 
-After all Windows VMs are ready:
+After all Windows VMs are ready with WinRM enabled:
 
+**Option 1: Use the deployment script (Recommended)**
+```bash
+./deploy_goad.sh
+```
+
+**Option 2: Manual deployment**
 ```bash
 cd GOAD/ansible
 ansible-playbook -i ../ad/GOAD/data/inventory main.yml
 ```
 
 This takes 1-2 hours. Go grab coffee! ☕
+
+The deployment script will:
+- ✅ Check prerequisites
+- ✅ Generate Ansible inventory
+- ✅ Test WinRM connectivity
+- ✅ Deploy GOAD automatically
 
 ## Access Your Lab
 
