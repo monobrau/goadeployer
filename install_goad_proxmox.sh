@@ -211,9 +211,59 @@ install_dependencies() {
 check_python_requirements() {
     log_info "Checking Python requirements..."
 
-    # Install required Python packages
-    pip3 install --upgrade pip
-    pip3 install ansible proxmoxer requests pywinrm
+    # Check if packages are already installed
+    local missing_packages=()
+    
+    if ! python3 -c "import ansible" &> /dev/null; then
+        missing_packages+=("ansible")
+    fi
+    if ! python3 -c "import proxmoxer" &> /dev/null; then
+        missing_packages+=("proxmoxer")
+    fi
+    if ! python3 -c "import requests" &> /dev/null; then
+        missing_packages+=("requests")
+    fi
+    if ! python3 -c "import winrm" &> /dev/null; then
+        missing_packages+=("pywinrm")
+    fi
+    
+    if [[ ${#missing_packages[@]} -eq 0 ]]; then
+        log_success "All Python requirements already installed"
+        return 0
+    fi
+    
+    log_info "Installing missing Python packages: ${missing_packages[*]}"
+    
+    # Try installing via apt first (for packages available in Debian repos)
+    if command -v apt-get &> /dev/null; then
+        if apt-get install -y python3-ansible python3-requests &> /dev/null 2>&1; then
+            log_info "Installed ansible and requests via apt"
+            missing_packages=($(echo "${missing_packages[@]}" | tr ' ' '\n' | grep -v "ansible\|requests"))
+        fi
+    fi
+    
+    # Install remaining packages with pip (use --break-system-packages for Debian)
+    if [[ ${#missing_packages[@]} -gt 0 ]]; then
+        log_info "Installing via pip: ${missing_packages[*]}"
+        
+        # Check if we need --break-system-packages flag
+        if python3 -m pip --version 2>&1 | grep -q "externally-managed"; then
+            log_warning "Using --break-system-packages flag (Debian externally-managed environment)"
+            pip3 install --break-system-packages --upgrade pip &> /dev/null || true
+            pip3 install --break-system-packages "${missing_packages[@]}" || {
+                log_error "Failed to install Python packages"
+                log_info "You may need to install manually:"
+                log_info "  pip3 install --break-system-packages ${missing_packages[*]}"
+                return 1
+            }
+        else
+            pip3 install --upgrade pip &> /dev/null || true
+            pip3 install "${missing_packages[@]}" || {
+                log_error "Failed to install Python packages"
+                return 1
+            }
+        fi
+    fi
 
     log_success "Python requirements satisfied"
 }
@@ -316,7 +366,12 @@ install_goad_dependencies() {
     # Install Python requirements if exists
     if [[ -f "requirements.txt" ]]; then
         log_info "Installing Python requirements..."
-        pip3 install -r requirements.txt
+        # Check if we need --break-system-packages flag
+        if python3 -m pip --version 2>&1 | grep -q "externally-managed"; then
+            pip3 install --break-system-packages -r requirements.txt
+        else
+            pip3 install -r requirements.txt
+        fi
     fi
 
     log_success "GOAD dependencies installed"

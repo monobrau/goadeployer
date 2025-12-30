@@ -163,7 +163,13 @@ check_prerequisites() {
 
     # Check Python requirements
     log_info "Checking Python requirements..."
-    pip3 install --quiet --upgrade pip proxmoxer requests pywinrm 2>&1 | tee -a "${LOG_FILE}" || true
+    
+    # Check if we need --break-system-packages flag
+    if python3 -m pip --version 2>&1 | grep -q "externally-managed"; then
+        pip3 install --quiet --break-system-packages --upgrade pip proxmoxer requests pywinrm 2>&1 | tee -a "${LOG_FILE}" || true
+    else
+        pip3 install --quiet --upgrade pip proxmoxer requests pywinrm 2>&1 | tee -a "${LOG_FILE}" || true
+    fi
 
     log_success "Prerequisites check completed"
 }
@@ -192,7 +198,12 @@ install_goad_dependencies() {
     # Install Python requirements if exists
     if [[ -f "requirements.txt" ]]; then
         log_info "Installing Python requirements..."
-        pip3 install -r requirements.txt 2>&1 | tee -a "${LOG_FILE}"
+        # Check if we need --break-system-packages flag
+        if python3 -m pip --version 2>&1 | grep -q "externally-managed"; then
+            pip3 install --break-system-packages -r requirements.txt 2>&1 | tee -a "${LOG_FILE}"
+        else
+            pip3 install -r requirements.txt 2>&1 | tee -a "${LOG_FILE}"
+        fi
     fi
 
     log_success "GOAD dependencies installed"
