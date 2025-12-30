@@ -49,7 +49,7 @@ chmod +x install_goad_proxmox.sh scripts/*.sh
 ./scripts/check_status.sh
 ```
 
-**That's it!** The installer handles network setup, VM creation, and GOAD deployment.
+**That's it!** The installer handles network setup, VM creation, automated Windows installation, and GOAD deployment.
 
 > 📘 **First time?** See [QUICKSTART.md](QUICKSTART.md) for detailed step-by-step guide.
 
@@ -200,11 +200,25 @@ Upload via: **Proxmox → Node → Storage → ISO Images → Upload**
 
 ### Windows Installation
 
-**IMPORTANT:** After the installer creates VMs, you MUST install Windows and configure WinRM BEFORE running `deploy_goad.sh`.
+**By default, Windows installation is automated using Packer.** The installer will:
+- Automatically install Windows Server on all VMs
+- Configure WinRM for Ansible connectivity
+- Set up basic network configuration
 
-**Option 1: Use the Windows Setup Guide (Recommended)**
+**For manual installation** (if you prefer or if Packer fails), use the `--manual` flag:
+
+**Option 1: Automated Installation (Default)**
 ```bash
-# Get step-by-step instructions
+# Packer automatically installs Windows (default behavior)
+./install_goad_proxmox.sh
+```
+
+**Option 2: Manual Installation**
+```bash
+# Use --manual flag for manual Windows installation
+./scripts/provision_vms.sh --manual
+
+# Or get step-by-step instructions
 ./setup_windows.sh
 ```
 
@@ -255,7 +269,7 @@ netsh advfirewall firewall add rule name="WinRM HTTP" protocol=TCP dir=in localp
 
 ### Continue GOAD Deployment
 
-**ONLY after Windows is installed and WinRM is enabled on ALL 5 VMs:**
+**After automated Windows installation completes (or manual installation if using --manual flag):**
 
 ```bash
 # Run the deployment script to continue with GOAD setup
@@ -268,7 +282,7 @@ This script will:
 - ✅ Test WinRM connectivity to all VMs
 - ✅ Deploy GOAD with Ansible (takes 1-2 hours)
 
-**⚠️ Important:** The script will FAIL if Windows is not installed or WinRM is not configured. Make sure you've completed the Windows installation steps above first!
+**Note:** With Packer (default), Windows and WinRM are automatically configured. If you used `--manual` flag, ensure Windows is installed and WinRM is enabled on all VMs before running `deploy_goad.sh`.
 
 ### Accessing Your Lab
 

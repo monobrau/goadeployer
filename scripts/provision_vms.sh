@@ -1236,9 +1236,13 @@ clone_vms_from_templates() {
 ################################################################################
 
 main() {
-    local use_packer=false
+    local use_packer=true  # Packer is now the default
     
-    # Check for --use-packer flag
+    # Check for flags
+    if [[ "${1:-}" == "--manual" ]] || [[ "${1:-}" == "--no-packer" ]]; then
+        use_packer=false
+    fi
+    # Keep --use-packer for explicit enable (backwards compatibility)
     if [[ "${1:-}" == "--use-packer" ]] || [[ "${1:-}" == "--automated" ]]; then
         use_packer=true
     fi
@@ -1283,9 +1287,12 @@ main() {
 
     log_success "VM provisioning completed"
     
-    if [[ "${use_packer}" != "true" ]]; then
+    if [[ "${use_packer}" == "true" ]]; then
+        log_info "Windows installed automatically. VMs are ready for GOAD deployment."
+        log_info "Run: ./deploy_goad.sh"
+    else
         log_warning "Please install Windows on each VM before proceeding with GOAD deployment"
-        log_info "Or re-run with --use-packer flag for automated installation"
+        log_info "Or re-run without --manual flag for automated installation"
     fi
 }
 

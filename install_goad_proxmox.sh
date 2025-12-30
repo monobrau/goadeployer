@@ -385,7 +385,8 @@ provision_vms() {
     log_step "Provisioning VMs on Proxmox..."
 
     if [[ -f "${SCRIPTS_DIR}/provision_vms.sh" ]]; then
-        bash "${SCRIPTS_DIR}/provision_vms.sh"
+        # Packer is now the default, but allow override with --manual flag
+        bash "${SCRIPTS_DIR}/provision_vms.sh" "${@}"
     else
         log_error "VM provisioning script not found: ${SCRIPTS_DIR}/provision_vms.sh"
         exit 1

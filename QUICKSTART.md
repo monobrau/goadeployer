@@ -66,9 +66,16 @@ The installer will:
 1. ✅ Check prerequisites (Ansible, Python, etc.)
 2. ✅ Create network bridge on VLAN 50
 3. ✅ Create 5 VMs for GOAD
-4. ⏸️ **PAUSE for Windows installation**
+4. ✅ **Automatically install Windows using Packer** (takes 1-2 hours)
+5. ✅ Configure WinRM automatically
 
-## Windows Installation
+## Windows Installation (Manual - Optional)
+
+**Note:** By default, Windows installation is automated using Packer. If you prefer manual installation or Packer fails, use the `--manual` flag:
+
+```bash
+./scripts/provision_vms.sh --manual
+```
 
 For each VM (DC01, DC02, DC03, SRV02, SRV03):
 
@@ -98,7 +105,7 @@ Set-Item WSMan:\localhost\Service\AllowUnencrypted -Value $true
 
 ## Continue GOAD Deployment
 
-After all Windows VMs are ready with WinRM enabled:
+After automated Windows installation completes (or manual installation if using --manual flag):
 
 **Option 1: Use the deployment script (Recommended)**
 ```bash
@@ -183,9 +190,9 @@ To remove everything:
 
 ---
 
-**Time Estimate**: 4-6 hours total
+**Time Estimate**: 3-4 hours total (with Packer automation)
 - Setup & VM creation: 30 min
-- Windows installation: 2-3 hours (manual) or 1 hour (Packer)
+- Windows installation: 1-2 hours (automated with Packer) or 2-3 hours (manual with --manual flag)
 - GOAD deployment: 1-2 hours
 
 **Happy Hacking! 🎯**
