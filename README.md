@@ -182,8 +182,11 @@ Upload via: **Proxmox → Node → Storage → ISO Images → Upload**
 ### Main Commands
 
 ```bash
-# Install GOAD (full installation)
+# Install GOAD (full installation - creates VMs)
 ./install_goad_proxmox.sh
+
+# Get Windows installation instructions
+./setup_windows.sh
 
 # Resume deployment after Windows installation
 ./deploy_goad.sh
@@ -197,31 +200,62 @@ Upload via: **Proxmox → Node → Storage → ISO Images → Upload**
 
 ### Windows Installation
 
-After the installer creates VMs, you'll need to install Windows on each VM:
+**IMPORTANT:** After the installer creates VMs, you MUST install Windows and configure WinRM BEFORE running `deploy_goad.sh`.
 
-**Quick Method (per VM):**
-1. Open VM console in Proxmox
-2. Install Windows Server
-3. Load VirtIO drivers (from 2nd CD-ROM)
-4. Set Administrator password: `Password123!`
-5. Configure network with PowerShell:
+**Option 1: Use the Windows Setup Guide (Recommended)**
+```bash
+# Get step-by-step instructions
+./setup_windows.sh
+```
 
+**Option 2: Manual Installation**
+
+For each VM (DC01, DC02, DC03, SRV02, SRV03):
+
+1. **Install Windows Server:**
+   - Open VM console in Proxmox
+   - Boot from Windows Server ISO
+   - Select "Windows Server 20XX Standard Evaluation (Desktop Experience)"
+   - **Load VirtIO drivers** when selecting disk (from 2nd CD-ROM)
+   - Complete installation
+   - Set Administrator password: `Password123!`
+
+2. **Configure Static IP (PowerShell as Administrator):**
 ```powershell
-# Replace .10 with correct IP for each VM
+# DC01 (192.168.50.10)
 New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 192.168.50.10 -PrefixLength 24 -DefaultGateway 192.168.50.1
 Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 192.168.50.10
 
-# Enable WinRM for Ansible
+# DC02 (192.168.50.11) - Use DC01 as DNS
+New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 192.168.50.11 -PrefixLength 24 -DefaultGateway 192.168.50.1
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 192.168.50.10
+
+# DC03 (192.168.50.12) - Use itself as DNS
+New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 192.168.50.12 -PrefixLength 24 -DefaultGateway 192.168.50.1
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 192.168.50.12
+
+# SRV02 (192.168.50.22) - Use DC01 as DNS
+New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 192.168.50.22 -PrefixLength 24 -DefaultGateway 192.168.50.1
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 192.168.50.10
+
+# SRV03 (192.168.50.23) - Use DC03 as DNS
+New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 192.168.50.23 -PrefixLength 24 -DefaultGateway 192.168.50.1
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 192.168.50.12
+```
+
+3. **Enable WinRM (Required for Ansible):**
+```powershell
 winrm quickconfig -force
 Set-Item WSMan:\localhost\Service\Auth\Basic -Value $true
 Set-Item WSMan:\localhost\Service\AllowUnencrypted -Value $true
+netsh advfirewall firewall add rule name="WinRM HTTP" protocol=TCP dir=in localport=5985 action=allow
 ```
 
 **VM IP Mapping:** DC01=.10, DC02=.11, DC03=.12, SRV02=.22, SRV03=.23
 
 ### Continue GOAD Deployment
 
-After Windows is installed and WinRM is enabled on all VMs:
+**ONLY after Windows is installed and WinRM is enabled on ALL 5 VMs:**
 
 ```bash
 # Run the deployment script to continue with GOAD setup
@@ -234,11 +268,7 @@ This script will:
 - ✅ Test WinRM connectivity to all VMs
 - ✅ Deploy GOAD with Ansible (takes 1-2 hours)
 
-**Note:** Make sure all VMs have:
-- Windows Server installed
-- Static IPs configured
-- WinRM enabled
-- Firewall allows port 5985
+**⚠️ Important:** The script will FAIL if Windows is not installed or WinRM is not configured. Make sure you've completed the Windows installation steps above first!
 
 ### Accessing Your Lab
 

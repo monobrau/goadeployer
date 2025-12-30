@@ -65,6 +65,29 @@ print_banner() {
 EOF
 }
 
+print_prerequisites() {
+    cat << 'EOF'
+
+╔════════════════════════════════════════════════════════════════╗
+║                    PREREQUISITES CHECK                        ║
+╠════════════════════════════════════════════════════════════════╣
+║                                                                ║
+║  Before running this script, ensure:                          ║
+║                                                                ║
+║  ✅ Windows Server is FULLY INSTALLED on all 5 VMs            ║
+║  ✅ Static IP addresses are configured                        ║
+║  ✅ WinRM is enabled and accessible                            ║
+║  ✅ Firewall allows port 5985                                  ║
+║  ✅ Administrator password is set correctly                     ║
+║                                                                ║
+║  If Windows is NOT installed yet, run:                         ║
+║    ./setup_windows.sh                                          ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+EOF
+}
+
 ################################################################################
 # Configuration Loading
 ################################################################################
@@ -435,6 +458,17 @@ main() {
 
     # Print banner
     print_banner
+    
+    # Print prerequisites
+    print_prerequisites
+    
+    read -p "Have you completed Windows installation and WinRM setup on all VMs? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log_warning "Please complete Windows installation first!"
+        log_info "Run './setup_windows.sh' for detailed instructions"
+        exit 1
+    fi
 
     log_info "GOAD deployment started at $(date)"
     log_info "Log file: ${LOG_FILE}"
