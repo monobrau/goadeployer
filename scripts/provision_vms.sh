@@ -364,19 +364,29 @@ create_vm() {
         fi
     fi
 
-    # Configure boot order - boot from ISO first, then disk
-    log_info "Configuring boot order..."
+    # Configure BIOS/UEFI and boot order
+    log_info "Configuring BIOS and boot order..."
     if command -v qm &> /dev/null; then
-        # Boot from ide0 (Windows ISO) first, then scsi0 (disk), then ide2 (VirtIO)
-        if ! qm set "${vmid}" --boot "order=ide0;scsi0;ide2"; then
+        # Set BIOS (not UEFI) for Windows Server - more compatible
+        qm set "${vmid}" --bios seabios &> /dev/null || true
+        
+        # Boot from ide0 (Windows ISO) first, then scsi0 (disk)
+        # Note: ide2 (VirtIO) removed from boot order as it's not bootable
+        if ! qm set "${vmid}" --boot "order=ide0;scsi0"; then
             log_warning "Failed to set boot order via qm, trying API..."
-            local boot_data="boot=order=ide0;scsi0;ide2"
+            local boot_data="boot=order=ide0;scsi0"
             pve_api POST "/nodes/${PROXMOX_NODE}/qemu/${vmid}/config" "${boot_data}" > /dev/null 2>&1
         else
-            log_success "Boot order configured: ide0 (ISO) first"
+            log_success "Boot order configured: ide0 (ISO) first, then scsi0 (disk)"
+        fi
+        
+        # Verify boot order was set
+        local boot_check=$(qm config "${vmid}" 2>/dev/null | grep "^boot:" || echo "")
+        if [[ -z "${boot_check}" ]]; then
+            log_warning "Boot order may not be set correctly. Please verify manually."
         fi
     else
-        local boot_data="boot=order=ide0;scsi0;ide2"
+        local boot_data="boot=order=ide0;scsi0"
         pve_api POST "/nodes/${PROXMOX_NODE}/qemu/${vmid}/config" "${boot_data}" > /dev/null 2>&1
     fi
     
@@ -434,10 +444,34 @@ start_all_vms() {
         
         log_info "Starting VM ${vmid}: ${name}..."
         if command -v qm &> /dev/null; then
+            # Verify ISO is attached before starting
+            local iso=$(qm config "${vmid}" 2>/dev/null | grep "^ide0:" | cut -d: -f2 | cut -d, -f1 | tr -d ' ')
+            if [[ -z "${iso}" ]] || [[ "${iso}" == "none" ]]; then
+                log_error "VM ${vmid} has no ISO attached! Cannot boot."
+                log_info "Please attach ISO: qm set ${vmid} --ide0 ${PROXMOX_STORAGE}:iso/YOUR_ISO.iso,media=cdrom"
+                continue
+            fi
+            
+            # Check boot order
+            local boot_order=$(qm config "${vmid}" 2>/dev/null | grep "^boot:" || echo "")
+            if [[ -z "${boot_order}" ]]; then
+                log_warning "VM ${vmid} has no boot order set. Setting it now..."
+                qm set "${vmid}" --boot "order=ide0;scsi0" &> /dev/null || true
+            fi
+            
+            # Start VM
             if qm start "${vmid}" &> /dev/null; then
                 log_success "VM ${vmid} (${name}) started successfully"
+                log_info "  ISO: ${iso}"
+                log_info "  Console: qm terminal ${vmid}"
             else
-                log_warning "Failed to start VM ${vmid}, it may already be running"
+                local status=$(qm status "${vmid}" 2>/dev/null | awk '{print $2}')
+                if [[ "${status}" == "running" ]]; then
+                    log_warning "VM ${vmid} is already running"
+                else
+                    log_error "Failed to start VM ${vmid}"
+                    log_info "Check logs: journalctl -u pve-cluster -f"
+                fi
             fi
         else
             log_warning "qm command not available, cannot start VM ${vmid}"
@@ -445,8 +479,8 @@ start_all_vms() {
         fi
     done
     
-    log_success "All VMs started. They should now boot into Windows installer mode."
-    log_info "Access each VM via Proxmox console to complete Windows installation."
+    log_success "VM startup completed."
+    log_info "If VMs don't boot, run: ./scripts/troubleshoot_vm_boot.sh"
 }
 
 ################################################################################
